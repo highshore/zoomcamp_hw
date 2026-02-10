@@ -14,6 +14,19 @@ Compute Homework 2 numeric answers from NYC TLC release files using a reproducib
 - Programmatic row counting and file-size aggregation
 - Deterministic monthly loops to avoid manual mistakes
 
+## Course Concept Mapping (What and Where)
+
+- Workflow orchestration mindset (Module 2): represented by codifying repeatable steps in `module2/compute_hw2_answers.py` instead of one-off manual counting.
+- Parameterized, reusable data pipeline logic: URL template `BASE_URL` and monthly loop in `main()` of `module2/compute_hw2_answers.py`.
+- Efficient data processing for large files:
+  - streaming HTTP reads (`urllib.request.urlopen`)
+  - chunk-based processing (`gz.read(1024 * 1024)`)
+  - incremental metrics (`line_count`, `total_size`) in `count_rows_and_size`.
+- Reliable metric extraction:
+  - row counting by newline count
+  - header adjustment (`line_count -= 1`) to produce data-row totals only.
+- Reproducibility and automation: single command run (`python3 compute_hw2_answers.py`) generates consistent Q1/Q3/Q4/Q5 outputs.
+
 ## File and What It Does
 
 - `compute_hw2_answers.py`

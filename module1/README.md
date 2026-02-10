@@ -13,6 +13,17 @@ Build a local data environment with Docker, ingest NYC Taxi data into PostgreSQL
 - Programmatic ingestion from file formats (`parquet`, `csv`) into PostgreSQL
 - Relational querying with SQL (`COUNT`, `GROUP BY`, `JOIN`, `ORDER BY`, filters)
 
+## Course Concept Mapping (What and Where)
+
+- Docker containers and services (Module 1 Docker section): implemented in `module1/docker-compose.yaml` with `postgres` and `pgadmin` services.
+- Port mapping and host-container networking: `5433:5432` in `module1/docker-compose.yaml`, used by SQLAlchemy URL in `module1/ingest.py`.
+- Persistence with Docker volumes: `vol-pgdata` and `vol-pgadmin_data` in `module1/docker-compose.yaml`.
+- Data ingestion with Python (Pandas + SQLAlchemy): `module1/ingest.py` (`read_parquet`, `read_csv`, `to_sql`).
+- SQL refresher concepts:
+  - filtering and counting: Question 3 query (`WHERE` + `COUNT(*)`)
+  - aggregations and grouping: Question 4/5 (`MAX`, `SUM`, `GROUP BY`)
+  - joins for enrichment: Question 5/6 join `green_taxi_trips` with `zones`.
+
 ## Files and What They Do
 
 - `docker-compose.yaml`

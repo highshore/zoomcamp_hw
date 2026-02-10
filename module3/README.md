@@ -14,6 +14,23 @@ Load Yellow Taxi 2024 Jan-Jun data into GCS and BigQuery, then compute homework 
 - Dry runs to measure bytes processed
 - End-to-end automation with Python clients (GCS + BigQuery)
 
+## Course Concept Mapping (What and Where)
+
+- Data warehouse architecture (Module 3 intro): raw files in GCS + analytical serving in BigQuery via `module3/compute_hw3_answers.py`.
+- External tables vs native tables:
+  - external: `create_external_table(...)`
+  - native/materialized: `create_materialized_table(...)`.
+- Partitioning and clustering best practices:
+  - `PARTITION BY DATE(tpep_dropoff_datetime)`
+  - `CLUSTER BY VendorID`
+  in `create_partitioned_table(...)`.
+- Query cost/performance analysis using bytes processed:
+  - dry-run utility: `dry_run_bytes(...)`
+  - applied in Q2/Q3/Q6/Q9 sections in `main()`.
+- Pipeline automation and idempotence:
+  - upload only when missing (`if not blob.exists()`)
+  - dataset/table creation with `exists_ok=True`.
+
 ## File and What It Does
 
 - `compute_hw3_answers.py`

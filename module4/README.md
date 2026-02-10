@@ -16,6 +16,27 @@ Apply dbt-style analytics engineering transformations to NYC Taxi datasets and c
 - Aggregation to reporting mart (`fct_monthly_zone_revenue`)
 - FHV staging rule: `dispatching_base_num is not null`
 
+## Course Concept Mapping (What and Where)
+
+- dbt project layering (Module 4 core concept):
+  - staging logic mirrored in `stg_green`, `stg_yellow`
+  - intermediate logic mirrored in `int_trips_unioned`, `int_trips`
+  - mart/reporting logic mirrored in `fct_trips`, `fct_monthly_zone_revenue`
+  inside `module4/compute_hw4_answers.py`.
+- Schema standardization in staging: column renaming and type casting in `stg_green`/`stg_yellow` CTEs and `module4/stg_fhv_tripdata.sql`.
+- Data quality and deduplication patterns:
+  - null vendor filter in staging
+  - `row_number() ... qualify = 1` in `int_trips`.
+- Dimensional modeling:
+  - `dim_zones` as lookup dimension
+  - enrichment joins in `fct_trips`.
+- Analytics marts and business-level aggregations:
+  - monthly zone revenue computed in `fct_monthly_zone_revenue`
+  - used directly for Q3/Q4/Q5 answer extraction.
+- Additional source onboarding (FHV):
+  - dedicated staging model in `module4/stg_fhv_tripdata.sql`
+  - validation metric in Q6 query (`dispatching_base_num is not null`).
+
 ## Files and What They Do
 
 - `compute_hw4_answers.py`
