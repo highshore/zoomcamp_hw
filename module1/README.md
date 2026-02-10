@@ -1,80 +1,136 @@
-# Question 1: Checking Docker Images
+## Module 1 - Docker + PostgreSQL + SQL
+
+This folder contains my Homework 1 work for Data Engineering Zoomcamp 2026.
+
+## Objective
+
+Build a local data environment with Docker, ingest NYC Taxi data into PostgreSQL, and answer SQL questions from that loaded dataset.
+
+## Concepts Used
+
+- Containerization with Docker and Docker Compose
+- Persistent volumes for database and pgAdmin state
+- Programmatic ingestion from file formats (`parquet`, `csv`) into PostgreSQL
+- Relational querying with SQL (`COUNT`, `GROUP BY`, `JOIN`, `ORDER BY`, filters)
+
+## Files and What They Do
+
+- `docker-compose.yaml`
+  - Starts two services: `postgres` and `pgadmin`
+  - Maps PostgreSQL to host port `5433` and pgAdmin to `8080`
+  - Uses named volumes (`vol-pgdata`, `vol-pgadmin_data`) so data survives container restarts
+
+- `ingest.py`
+  - Connects to PostgreSQL using SQLAlchemy
+  - Reads `green_tripdata_2025-11.parquet` into a Pandas DataFrame
+  - Writes DataFrame to table `green_taxi_trips`
+  - Reads `taxi_zone_lookup.csv`
+  - Writes lookup data to table `zones`
+
+- `green_tripdata_2025-11.parquet`, `taxi_zone_lookup.csv`
+  - Input datasets used for loading and analysis
+
+## Step-by-Step Workflow
+
+1. Start infra:
+
+```bash
+docker-compose up -d
+```
+
+2. (Question 1) Check Python image / pip version:
+
+```bash
 docker run -it --entrypoint bash python:3.13
 pip --version
+```
 
-# Start Up Application Stack as Defined in Your docker-compose.yaml File
-docker-compose up -d
+3. Load data into PostgreSQL:
 
-# Download the Files to My Local Folder
-wget https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-11.parquet
-wget https://github.com/DataTalksClub/nyc-tlc-data/releases/download/misc/taxi_zone_lookup.csv
-
-# Load Data to PostgreSQL DB
+```bash
 python3 ingest.py
+```
+
+4. Connect to DB for SQL answers:
+
+```bash
 docker exec -it postgres psql -U postgres -d ny_taxi
+```
 
-# Question 3: Counting short trips
-psql (17.7)
-Type "help" for help.
+## How the SQL Produced the Answers
 
-ny_taxi=# SELECT COUNT(*) 
-ny_taxi-# FROM green_taxi_trips 
-ny_taxi-# WHERE lpep_pickup_datetime >= '2025-11-01' 
-ny_taxi-#   AND lpep_pickup_datetime < '2025-12-01' 
-ny_taxi-#   AND trip_distance <= 1;
- count 
--------
-  8007
-(1 row)
+### Question 3 - Counting short trips
 
-# Question 4: Longest trip for each day
-ny_taxi=# SELECT 
-ny_taxi-#     DATE(lpep_pickup_datetime) AS pickup_day,
-ny_taxi-#     MAX(trip_distance) AS max_distance
-ny_taxi-# FROM green_taxi_trips
-ny_taxi-# WHERE lpep_pickup_datetime >= '2025-11-01' 
-ny_taxi-#   AND lpep_pickup_datetime < '2025-12-01'
-ny_taxi-#   AND trip_distance < 100  -- Exclude erroneous outliers
-ny_taxi-# GROUP BY pickup_day
-ny_taxi-# ORDER BY max_distance DESC
-ny_taxi-# LIMIT 1;
- pickup_day | max_distance 
-------------+--------------
- 2025-11-14 |        88.03
-(1 row)
+```sql
+SELECT COUNT(*)
+FROM green_taxi_trips
+WHERE lpep_pickup_datetime >= '2025-11-01'
+  AND lpep_pickup_datetime < '2025-12-01'
+  AND trip_distance <= 1;
+```
 
-# Question 5: Biggest pickup zone
-ny_taxi=# SELECT 
-ny_taxi-#     z."Zone",
-ny_taxi-#     SUM(t.total_amount) AS total_revenue
-ny_taxi-# FROM green_taxi_trips t
-ny_taxi-# JOIN zones z ON t."PULocationID" = z."LocationID"
-ny_taxi-# WHERE t.lpep_pickup_datetime >= '2025-11-18' 
-ny_taxi-#   AND t.lpep_pickup_datetime < '2025-11-19'
-ny_taxi-# GROUP BY z."Zone"
-ny_taxi-# ORDER BY total_revenue DESC
-ny_taxi-# LIMIT 1;
-       Zone        |   total_revenue   
--------------------+-------------------
- East Harlem North | 9281.919999999996
-(1 row)
+- Logic: month filter + trip distance threshold (`<= 1 mile`)
+- Result: **8007**
 
-# Question 6: Largest tip
-ny_taxi=# SELECT 
-ny_taxi-#     z_drop."Zone",
-ny_taxi-#     MAX(t.tip_amount) AS max_tip
-ny_taxi-# FROM green_taxi_trips t
-ny_taxi-# JOIN zones z_pick ON t."PULocationID" = z_pick."LocationID"
-ny_taxi-# JOIN zones z_drop ON t."DOLocationID" = z_drop."LocationID"
-ny_taxi-# WHERE z_pick."Zone" = 'East Harlem North'
-ny_taxi-#   AND t.lpep_pickup_datetime >= '2025-11-01' 
-ny_taxi-#   AND t.lpep_pickup_datetime < '2025-12-01'
-ny_taxi-# GROUP BY z_drop."Zone"
-ny_taxi-# ORDER BY max_tip DESC
-ny_taxi-# LIMIT 1;
-      Zone      | max_tip 
-----------------+---------
- Yorkville West |   81.89
-(1 row)
+### Question 4 - Longest trip day in November
 
-ny_taxi=# 
+```sql
+SELECT
+    DATE(lpep_pickup_datetime) AS pickup_day,
+    MAX(trip_distance) AS max_distance
+FROM green_taxi_trips
+WHERE lpep_pickup_datetime >= '2025-11-01'
+  AND lpep_pickup_datetime < '2025-12-01'
+  AND trip_distance < 100
+GROUP BY pickup_day
+ORDER BY max_distance DESC
+LIMIT 1;
+```
+
+- Logic: compute daily maximum distance, remove extreme outliers (`trip_distance < 100`), pick highest day
+- Result: **2025-11-14** with **88.03** miles
+
+### Question 5 - Biggest pickup zone by revenue on 2025-11-18
+
+```sql
+SELECT
+    z."Zone",
+    SUM(t.total_amount) AS total_revenue
+FROM green_taxi_trips t
+JOIN zones z ON t."PULocationID" = z."LocationID"
+WHERE t.lpep_pickup_datetime >= '2025-11-18'
+  AND t.lpep_pickup_datetime < '2025-11-19'
+GROUP BY z."Zone"
+ORDER BY total_revenue DESC
+LIMIT 1;
+```
+
+- Logic: join trip records with zone names, aggregate `total_amount` by pickup zone, select top zone
+- Result: **East Harlem North** (`9281.92`)
+
+### Question 6 - Largest tip from East Harlem North pickups
+
+```sql
+SELECT
+    z_drop."Zone",
+    MAX(t.tip_amount) AS max_tip
+FROM green_taxi_trips t
+JOIN zones z_pick ON t."PULocationID" = z_pick."LocationID"
+JOIN zones z_drop ON t."DOLocationID" = z_drop."LocationID"
+WHERE z_pick."Zone" = 'East Harlem North'
+  AND t.lpep_pickup_datetime >= '2025-11-01'
+  AND t.lpep_pickup_datetime < '2025-12-01'
+GROUP BY z_drop."Zone"
+ORDER BY max_tip DESC
+LIMIT 1;
+```
+
+- Logic: filter trips by pickup zone, find max `tip_amount` by dropoff zone, return highest
+- Result: **Yorkville West** (`81.89`)
+
+## Summary of Captured Results
+
+- Q3: **8007**
+- Q4: **2025-11-14 (88.03)**
+- Q5: **East Harlem North (9281.92)**
+- Q6: **Yorkville West (81.89)**
